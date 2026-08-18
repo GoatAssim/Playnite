@@ -80,11 +80,11 @@ namespace Playnite.Tests.Models
         }
 
         [Test]
-        public void GetCopy_ReturnsDifferentId()
+        public void GetCopy_PreservesId()
         {
             var original = new GameAction { Name = "test" };
             var copy = original.GetCopy();
-            Assert.AreNotEqual(original.Id, copy.Id);
+            Assert.AreEqual(original.Id, copy.Id);
         }
 
         [Test]

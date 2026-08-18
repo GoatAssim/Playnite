@@ -447,7 +447,7 @@ namespace Playnite.SDK.Models
         {
             return new GameAction
             {
-                Id = Guid.NewGuid(),
+                Id = Id,
                 AdditionalArguments = AdditionalArguments,
                 Arguments = Arguments,
                 EmulatorId = EmulatorId,
