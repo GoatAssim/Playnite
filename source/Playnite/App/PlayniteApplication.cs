@@ -1097,6 +1097,23 @@ namespace Playnite
             {
                 PipeService_CommandExecuted(this, new CommandExecutedEventArgs(CmdlineCommand.UriRequest, CmdLine.UriData));
             }
+            else if (!CmdLine.StartAction.IsNullOrEmpty())
+            {
+                var arg = CmdLine.StartAction;
+                if (arg.StartsWith("playnite://", StringComparison.OrdinalIgnoreCase))
+                {
+                    PipeService_CommandExecuted(this, new CommandExecutedEventArgs(CmdlineCommand.UriRequest, arg));
+                }
+                else
+                {
+                    var parts = arg.Contains(":") ? arg.Split(':') : arg.Split('/');
+                    if (parts.Length == 2)
+                    {
+                        var uri = $"playnite://playnite/{UriCommands.StartAction}/{parts[0]}/{parts[1]}";
+                        PipeService_CommandExecuted(this, new CommandExecutedEventArgs(CmdlineCommand.UriRequest, uri));
+                    }
+                }
+            }
             else if (!CmdLine.InstallExtension.IsNullOrEmpty())
             {
                 PipeService_CommandExecuted(this, new CommandExecutedEventArgs(CmdlineCommand.ExtensionInstall, CmdLine.InstallExtension));
@@ -1151,6 +1168,26 @@ namespace Playnite
                     else
                     {
                         logger.Error($"Can't start game, failed to parse game id: {arguments[1]}");
+                    }
+
+                    break;
+
+                case UriCommands.StartAction:
+                    if (arguments.Count() != 3)
+                    {
+                        logger.Error("startaction URI has wrong number of arguments.");
+                        return;
+                    }
+
+                    if (!Guid.TryParse(arguments[1], out var gameIdAction) || !Guid.TryParse(arguments[2], out var actionId))
+                    {
+                        logger.Error($"Can't start action, failed to parse IDs: {arguments[1]}, {arguments[2]}");
+                        return;
+                    }
+
+                    if (!ActionLauncher.TryLaunchActionByIds(Database, GamesEditor, gameIdAction, actionId, out var err))
+                    {
+                        logger.Error(err);
                     }
 
                     break;
@@ -1463,6 +1500,68 @@ namespace Playnite
             }
 
             return true;
+        }
+
+        protected void MigrateGameActionIds()
+        {
+            if (AppSettings.GameActionIdsMigrationDone)
+            {
+                return;
+            }
+
+            try
+            {
+                if (!Database.IsOpen)
+                {
+                    if (AppSettings.DatabasePath.IsNullOrEmpty())
+                    {
+                        return;
+                    }
+
+                    Database.SetDatabasePath(AppSettings.DatabasePath);
+                    Database.OpenDatabase();
+                }
+            }
+            catch (Exception e) when (!PlayniteEnvironment.ThrowAllErrors)
+            {
+                logger.Error(e, "Failed to open database for GameAction ID migration.");
+                return;
+            }
+
+            bool anySaved = false;
+            using (Database.BufferedUpdate())
+            {
+                foreach (var game in Database.Games)
+                {
+                    if (game.GameActions == null)
+                    {
+                        continue;
+                    }
+
+                    bool changed = false;
+                    foreach (var action in game.GameActions)
+                    {
+                        if (action.Id == Guid.Empty)
+                        {
+                            action.Id = Guid.NewGuid();
+                            changed = true;
+                        }
+                    }
+
+                    if (changed)
+                    {
+                        Database.Games.Update(game);
+                        anySaved = true;
+                    }
+                }
+            }
+
+            AppSettings.GameActionIdsMigrationDone = true;
+            AppSettings.SaveSettings();
+            if (anySaved)
+            {
+                logger.Info("Migrated GameAction IDs for legacy library.");
+            }
         }
 
         public void UpdateScreenInformation(Controls.WindowBase window)

@@ -1961,6 +1961,17 @@ namespace Playnite
             }
         }
 
+        private bool gameActionIdsMigrationDone = false;
+        public bool GameActionIdsMigrationDone
+        {
+            get => gameActionIdsMigrationDone;
+            set
+            {
+                gameActionIdsMigrationDone = value;
+                OnPropertyChanged();
+            }
+        }
+
         private bool gameSortingNameAutofill = true;
         public bool GameSortingNameAutofill
         {

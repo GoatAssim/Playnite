@@ -91,6 +91,7 @@ namespace Playnite.DesktopApp
             AppUriHandler = MainModel.ProcessUriRequest;
             var isFirstStart = ProcessStartupWizard();
             MigrateDatabase();
+            MigrateGameActionIds();
 #pragma warning disable CS4014
             if (AppSettings.EnableGameControllerSupport)
             {

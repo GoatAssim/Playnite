@@ -12,6 +12,9 @@ namespace Playnite
         [Option("start")]
         public string Start { get; set; }
 
+        [Option("startaction")]
+        public string StartAction { get; set; }
+
         [Option("uridata")]
         public string UriData { get; set; }
 

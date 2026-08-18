@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Runtime.Serialization;
 
 namespace Playnite.SDK.Models
 {
@@ -73,6 +74,38 @@ namespace Playnite.SDK.Models
     /// </summary>
     public class GameAction : ObservableObject, IEquatable<GameAction>
     {
+        private Guid id = Guid.NewGuid();
+        /// <summary>
+        /// Unique identifier for this action (used for URIs).
+        /// Guaranteed to be non-empty after construction or deserialization.
+        /// </summary>
+        public Guid Id
+        {
+            get
+            {
+                if (id == Guid.Empty)
+                {
+                    id = Guid.NewGuid();
+                }
+
+                return id;
+            }
+            set
+            {
+                id = value;
+                OnPropertyChanged();
+            }
+        }
+
+        [OnDeserialized]
+        internal void OnDeserialized(StreamingContext context)
+        {
+            if (id == Guid.Empty)
+            {
+                id = Guid.NewGuid();
+            }
+        }
+
         private GameActionType type;
         /// <summary>
         /// Gets or sets task type.
@@ -414,6 +447,7 @@ namespace Playnite.SDK.Models
         {
             return new GameAction
             {
+                Id = Guid.NewGuid(),
                 AdditionalArguments = AdditionalArguments,
                 Arguments = Arguments,
                 EmulatorId = EmulatorId,

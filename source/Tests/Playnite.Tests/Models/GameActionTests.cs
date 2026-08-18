@@ -3,6 +3,7 @@ using Playnite.SDK.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -69,6 +70,38 @@ namespace Playnite.Tests.Models
             Assert.IsFalse(
                 new List<GameAction> { new GameAction() { Name = "1" }, new GameAction() { Name = "2" } }.IsListEqualExact(
                 new List<GameAction> { new GameAction() { Name = "2" }, new GameAction() { Name = "1" } }));
+        }
+
+        [Test]
+        public void NewGameAction_HasNonEmptyId()
+        {
+            var action = new GameAction();
+            Assert.AreNotEqual(Guid.Empty, action.Id);
+        }
+
+        [Test]
+        public void GetCopy_ReturnsDifferentId()
+        {
+            var original = new GameAction { Name = "test" };
+            var copy = original.GetCopy();
+            Assert.AreNotEqual(original.Id, copy.Id);
+        }
+
+        [Test]
+        public void OnDeserialized_AssignsIdWhenEmpty()
+        {
+            var action = new GameAction();
+            action.Id = Guid.Empty;
+            action.OnDeserialized(default(StreamingContext));
+            Assert.AreNotEqual(Guid.Empty, action.Id);
+        }
+
+        [Test]
+        public void IdGetter_AssignsIdWhenEmpty()
+        {
+            var action = new GameAction();
+            action.Id = Guid.Empty;
+            Assert.AreNotEqual(Guid.Empty, action.Id);
         }
     }
 }

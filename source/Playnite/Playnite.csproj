@@ -67,6 +67,9 @@
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="AngleSharp, Version=0.9.9.0, Culture=neutral, PublicKeyToken=e83494dcdc6d31ea, processorArchitecture=MSIL">
       <HintPath>..\packages\AngleSharp.0.9.9\lib\net45\AngleSharp.dll</HintPath>
@@ -485,6 +488,7 @@
     <Compile Include="Scripting\PowerShell\PowerShellScript.cs" />
     <Compile Include="SdkHelpers.cs" />
     <Compile Include="SelectableItem.cs" />
+    <Compile Include="Services\ActionLauncher.cs" />
     <Compile Include="Services\BaseServicesClient.cs" />
     <Compile Include="Services\GenericResponse.cs" />
     <Compile Include="GameTools.cs" />
@@ -777,11 +781,11 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <TargetPath>SDL2.dll</TargetPath>
     </ContentWithTargetPath>
-      <ContentWithTargetPath Include="..\..\references\SDL3.dll">
-          <Link>Dependencies\SDL3.dll</Link>
-          <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-          <TargetPath>SDL3.dll</TargetPath>
-      </ContentWithTargetPath>
+    <ContentWithTargetPath Include="..\..\references\SDL3.dll">
+      <Link>Dependencies\SDL3.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>SDL3.dll</TargetPath>
+    </ContentWithTargetPath>
     <ContentWithTargetPath Include="..\..\references\SDL2_mixer.dll">
       <Link>Dependencies\SDL2_mixer.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

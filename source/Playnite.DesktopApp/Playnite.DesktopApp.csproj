@@ -1240,7 +1240,7 @@
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>SETX PLAYNITE_SLN $(SolutionDir)</PostBuildEvent>
+    <PostBuildEvent>SETX PLAYNITE_SLN "$(SolutionDir.TrimEnd('\'))"</PostBuildEvent>
     <DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
   </PropertyGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">

@@ -29,5 +29,19 @@ namespace Playnite.Tests
             Assert.AreEqual("arg2", arguments[1]);
             Assert.AreEqual("arg3", arguments[2]);
         }
+
+        [Test]
+        public void StartActionUriParsingTest()
+        {
+            var gameId = Guid.NewGuid();
+            var actionId = Guid.NewGuid();
+            var uri = $@"playnite://playnite/startaction/{gameId}/{actionId}";
+            var (source, arguments) = PlayniteUriHandler.ParseUri(uri);
+            Assert.AreEqual("playnite", source);
+            Assert.AreEqual(3, arguments.Length);
+            Assert.AreEqual(UriCommands.StartAction, arguments[0]);
+            Assert.AreEqual(gameId.ToString(), arguments[1]);
+            Assert.AreEqual(actionId.ToString(), arguments[2]);
+        }
     }
 }

@@ -13,6 +13,7 @@ namespace Playnite
     public class UriCommands
     {
         public const string StartGame = "start";
+        public const string StartAction = "startaction";
         public const string CreateDiag = "creatediag";
         public const string ShowGame = "showgame";
         public const string InstallAddon = "installaddon";
