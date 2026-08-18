@@ -49,6 +49,7 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="{Binding ShowTrackingModeRow, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=OneWay, Converter={StaticResource BoolToAutoWidthConverter}}"/>
+                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
             <TextBlock Text="{DynamicResource LOCNameLabel}" Grid.Column="0" Grid.Row="0"/>
@@ -71,6 +72,11 @@
                       SelectedValue="{Binding TrackingMode}"
                       pbeh:SelectorBehaviors.EnumSource="{x:Type mods:TrackingMode}"
                       SelectionChanged="ComboTrackingMode_SelectionChanged"/>
+
+            <TextBlock Text="{DynamicResource LOCGameActionId}" Grid.Column="0" Grid.Row="4" />
+            <TextBox Grid.Column="1" Grid.Row="4"
+                     IsReadOnly="True"
+                     Text="{Binding Id, Mode=OneWay}" />
         </Grid>
 
         <TextBox Grid.Column="1" AcceptsReturn="True" AcceptsTab="True" MaxHeight="200"

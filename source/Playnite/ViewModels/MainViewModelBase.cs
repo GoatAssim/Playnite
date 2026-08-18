@@ -652,11 +652,68 @@ namespace Playnite.ViewModels
             }
         }
 
+        private string GetScanConfigValidationError(GameScannerConfig scanConfig)
+        {
+            var emulator = Database.Emulators[scanConfig.EmulatorId];
+            if (emulator == null)
+            {
+                return "Emulator not found.";
+            }
+
+            if (scanConfig.EmulatorProfileId.IsNullOrEmpty())
+            {
+                return "No emulator profile specified.";
+            }
+
+            if (scanConfig.EmulatorProfileId.StartsWith(CustomEmulatorProfile.ProfilePrefix, StringComparison.Ordinal))
+            {
+                if (emulator.CustomProfiles?.FirstOrDefault(a => a.Id == scanConfig.EmulatorProfileId) == null)
+                {
+                    return "Assigned custom emulator profile not found.";
+                }
+            }
+            else if (scanConfig.EmulatorProfileId.StartsWith(BuiltInEmulatorProfile.ProfilePrefix, StringComparison.Ordinal))
+            {
+                var builtinProfile = emulator.BuiltinProfiles?.FirstOrDefault(a => a.Id == scanConfig.EmulatorProfileId);
+                if (builtinProfile == null)
+                {
+                    return "Assigned built-in emulator profile not found.";
+                }
+
+                if (Emulation.GetProfile(emulator.BuiltInConfigId, builtinProfile.BuiltInProfileName) == null)
+                {
+                    return "Assigned built-in emulator profile definition not found.";
+                }
+            }
+            else
+            {
+                return "Emulator profile format not supported.";
+            }
+
+            return null;
+        }
+
+        private void ReportEmulatedImportError(GameScannerConfig scanConfig, string message)
+        {
+            Logger.Error($"Failed to import emulated games from config {scanConfig.Name}: {message}\n{scanConfig.Directory}\n{scanConfig.EmulatorId}\n{scanConfig.EmulatorProfileId}");
+            App.Notifications.Add(new NotificationMessage(
+                $"{scanConfig.Id} - import",
+                Resources.GetString(LOC.LibraryImportEmulatedError).Format(scanConfig.Name) + $"\n{message}",
+                NotificationType.Error));
+        }
+
         private List<Game> ImportEmulatedGames(GameScannerConfig scanConfig, CancellationToken token)
         {
             var addedGames = new List<Game>();
             if (token.IsCancellationRequested)
             {
+                return addedGames;
+            }
+
+            var validationError = GetScanConfigValidationError(scanConfig);
+            if (validationError != null)
+            {
+                ReportEmulatedImportError(scanConfig, validationError);
                 return addedGames;
             }
 
@@ -693,13 +750,9 @@ namespace Playnite.ViewModels
 
                 App.Notifications.Remove($"{scanConfig.Id} - import");
             }
-            catch (Exception e) when (!PlayniteEnvironment.ThrowAllErrors)
+            catch (Exception e)
             {
-                Logger.Error(e, $"Failed to import emulated games from config:\n{scanConfig.Directory}\n{scanConfig.EmulatorId}\n{scanConfig.EmulatorProfileId}");
-                App.Notifications.Add(new NotificationMessage(
-                    $"{scanConfig.Id} - import",
-                    Resources.GetString(LOC.LibraryImportEmulatedError).Format(scanConfig.Name) + $"\n{e.Message}",
-                    NotificationType.Error));
+                ReportEmulatedImportError(scanConfig, e.Message);
             }
 
             return addedGames;

@@ -29,7 +29,7 @@ namespace Playnite
 
             try
             {
-                gamesEditor.ActivateAction(game, action);
+                gamesEditor.PlayGameAction(game, action, launchedFromUI: false);
                 return true;
             }
             catch (Exception e)

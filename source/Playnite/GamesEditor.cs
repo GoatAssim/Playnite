@@ -206,6 +206,120 @@ namespace Playnite
                 return;
             }
 
+            if (game.IsRunning || game.IsLaunching)
+            {
+                logger.Warn("Failed to start the game, game is already running/launching.");
+                return;
+            }
+
+            var gameActions = GetPlayActions(game);
+            if (!gameActions.Item1.HasItems() && !gameActions.Item2.HasItems())
+            {
+                Dialogs.ShowErrorMessage(LOC.ErrorNoPlayAction, LOC.GameError);
+                return;
+            }
+
+            object playAction = null;
+            if ((gameActions.Item1.Count + gameActions.Item2.Count) > 1)
+            {
+                playAction = actionSelector.SelectPlayAction(gameActions.Item1, gameActions.Item2);
+            }
+            else
+            {
+                if (gameActions.Item1.Count > 0)
+                {
+                    playAction = gameActions.Item1[0];
+                }
+                else
+                {
+                    playAction = gameActions.Item2[0];
+                }
+            }
+
+            if (playAction == null)
+            {
+                return;
+            }
+
+            if (StartGameWithPlayAction(game, playAction, launchedFromUI, gameActions.Item1))
+            {
+                UpdateJumpList();
+            }
+        }
+
+        public void PlayGameAction(Game game, GameAction action, bool launchedFromUI)
+        {
+            if (action == null)
+            {
+                throw new ArgumentNullException(nameof(action));
+            }
+
+            if (action.Type == GameActionType.URL)
+            {
+                ProcessStarter.StartUrl(action.Path);
+                return;
+            }
+
+            logger.Info($"Starting action {action.Name} for {game.GetIdentifierInfo()}");
+            var dbGame = Database.Games.Get(game.Id);
+            if (dbGame == null)
+            {
+                Dialogs.ShowMessage(
+                    string.Format(resources.GetString("LOCGameStartErrorNoGame"), game.Name),
+                    resources.GetString("LOCGameError"),
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            object playAction;
+            if (action.Type == GameActionType.Emulator)
+            {
+                playAction = CreateEmulationPlayAction(game, action);
+            }
+            else
+            {
+                playAction = action;
+            }
+
+            if (StartGameWithPlayAction(game, playAction, launchedFromUI, null))
+            {
+                UpdateJumpList();
+            }
+        }
+
+        public void ActivateAction(Game game, GameAction action)
+        {
+            try
+            {
+                PlayGameAction(game, action, true);
+            }
+            catch (Exception exc) when (!PlayniteEnvironment.ThrowAllErrors)
+            {
+                logger.Error(exc, "Cannot activate action: ");
+                Dialogs.ShowMessage(
+                    string.Format(resources.GetString("LOCGameStartActionError"), exc.Message),
+                    resources.GetString("LOCGameError"),
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private EmulationPlayAction CreateEmulationPlayAction(Game game, GameAction action)
+        {
+            var emulator = Database.Emulators[action.EmulatorId];
+            if (emulator == null)
+            {
+                throw new Exception("Emulator not found.");
+            }
+
+            var prof = emulator.AllProfiles.FirstOrDefault(a => a.Id == action.EmulatorProfileId);
+            var newAction = action.GetClone<GameAction, EmulationPlayAction>();
+            newAction.SelectedEmulatorProfile = prof ?? throw new Exception("Specified emulator config does't exists.");
+            newAction.SelectedRomPath = game.Roms.HasItems() ? game.Roms[0].Path : string.Empty;
+            return newAction;
+        }
+
+        private bool StartGameWithPlayAction(Game game, object playAction, bool launchedFromUI, List<PlayController> pluginControllersToDispose)
+        {
             PlayController controller = null;
 
             try
@@ -213,36 +327,7 @@ namespace Playnite
                 if (game.IsRunning || game.IsLaunching)
                 {
                     logger.Warn("Failed to start the game, game is already running/launching.");
-                    return;
-                }
-
-                var gameActions = GetPlayActions(game);
-                if (!gameActions.Item1.HasItems() && !gameActions.Item2.HasItems())
-                {
-                    Dialogs.ShowErrorMessage(LOC.ErrorNoPlayAction, LOC.GameError);
-                    return;
-                }
-
-                object playAction = null;
-                if ((gameActions.Item1.Count + gameActions.Item2.Count) > 1)
-                {
-                    playAction = actionSelector.SelectPlayAction(gameActions.Item1, gameActions.Item2);
-                }
-                else
-                {
-                    if (gameActions.Item1.Count > 0)
-                    {
-                        playAction = gameActions.Item1[0];
-                    }
-                    else
-                    {
-                        playAction = gameActions.Item2[0];
-                    }
-                }
-
-                if (playAction == null)
-                {
-                    return;
+                    return false;
                 }
 
                 try
@@ -278,21 +363,24 @@ namespace Playnite
                     logger.Debug("Using generic controller to start emulated game.");
                     controller = new GenericPlayController(Database, game, scriptRuntimes[game.Id], Application.PlayniteApiGlobal);
                 }
-                else if (playAction is GameAction gameAction)
+                else if (playAction is GameAction)
                 {
                     logger.Debug("Using generic controller start a game.");
                     controller = new GenericPlayController(Database, game, scriptRuntimes[game.Id], Application.PlayniteApiGlobal);
                 }
                 else
                 {
-                    logger.Error($"Uknown controller found to start a game: {controller.GetType()}");
+                    logger.Error($"Uknown controller found to start a game: {playAction?.GetType()}");
                 }
 
-                foreach (var item in gameActions.Item1)
+                if (pluginControllersToDispose.HasItems())
                 {
-                    if (item != controller)
+                    foreach (var item in pluginControllersToDispose)
                     {
-                        item.Dispose();
+                        if (item != controller)
+                        {
+                            item.Dispose();
+                        }
                     }
                 }
 
@@ -300,7 +388,7 @@ namespace Playnite
                 {
                     scriptRuntimes.TryRemove(game.Id, out _);
                     Dialogs.ShowErrorMessage(LOC.ErrorStartupNoController, LOC.StartupError);
-                    return;
+                    return false;
                 }
 
                 void cancelStartup(string message)
@@ -327,7 +415,7 @@ namespace Playnite
                 if (startingArgs.CancelStartup)
                 {
                     cancelStartup("Game startup cancelled by an extension.");
-                    return;
+                    return false;
                 }
 
                 if (!game.IsCustomGame && shutdownJobs.TryGetValue(game.PluginId, out var existingJob))
@@ -358,25 +446,25 @@ namespace Playnite
                 if (!ExecuteScriptAction(scriptRuntimes[game.Id], AppSettings.PreScript, game, game.UseGlobalPreScript, true, GameScriptType.Starting, scriptVars))
                 {
                     cancelStartup("Game startup cancelled because global game script failed.");
-                    return;
+                    return false;
                 }
 
                 if (startingArgs.CancelStartup)
                 {
                     cancelStartup("Game startup cancelled by global game script.");
-                    return;
+                    return false;
                 }
 
                 if (!ExecuteScriptAction(scriptRuntimes[game.Id], game.PreScript, game, true, false, GameScriptType.Starting, scriptVars))
                 {
                     cancelStartup("Game startup cancelled because game script failed.");
-                    return;
+                    return false;
                 }
 
                 if (startingArgs.CancelStartup)
                 {
                     cancelStartup("Game startup cancelled by game script.");
-                    return;
+                    return false;
                 }
 
                 if (controller is GenericPlayController genCtrl)
@@ -415,68 +503,10 @@ namespace Playnite
                     UpdateGameState(game.Id, null, null, null, null, false);
                 }
 
-                return;
+                return false;
             }
 
-            UpdateJumpList();
-        }
-
-        public void ActivateAction(Game game, GameAction action)
-        {
-            try
-            {
-                switch (action.Type)
-                {
-                    case GameActionType.URL:
-                        ProcessStarter.StartUrl(action.Path);
-                        break;
-                    case GameActionType.File:
-                    case GameActionType.Emulator:
-                    case GameActionType.Script:
-                        using (var scriptRuntime = new PowerShellRuntime("Custom action runtime"))
-                        using (var controller = new GenericPlayController(Database, game, scriptRuntime, Application.PlayniteApiGlobal))
-                        {
-                            if (action.Type == GameActionType.Emulator)
-                            {
-                                var emulator = Database.Emulators[action.EmulatorId];
-                                if (emulator == null)
-                                {
-                                    throw new Exception($"Emulator not found.");
-                                }
-
-                                var prof = emulator.AllProfiles.FirstOrDefault(a => a.Id == action.EmulatorProfileId);
-                                var newAction = action.GetClone<GameAction, EmulationPlayAction>();
-                                newAction.SelectedEmulatorProfile = prof ?? throw new Exception("Specified emulator config does't exists.");
-                                newAction.SelectedRomPath = game.Roms.HasItems() ? game.Roms[0].Path : string.Empty;
-                                controller.StartEmulator(newAction, false, new SDK.Events.OnGameStartingEventArgs
-                                {
-                                    Game = game,
-                                    SelectedRomFile = newAction.SelectedRomPath,
-                                    SourceAction = action
-                                });
-                            }
-                            else
-                            {
-                                controller.Start(action, false,  new SDK.Events.OnGameStartingEventArgs
-                                {
-                                    Game = game,
-                                    SourceAction = action
-                                });
-                            }
-                        }
-                        break;
-                    default:
-                        throw new NotImplementedException();
-                }
-            }
-            catch (Exception exc) when (!PlayniteEnvironment.ThrowAllErrors)
-            {
-                logger.Error(exc, "Cannot activate action: ");
-                Dialogs.ShowMessage(
-                    string.Format(resources.GetString("LOCGameStartActionError"), exc.Message),
-                    resources.GetString("LOCGameError"),
-                    MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+            return true;
         }
 
         public void OpenGameLocation(Game game)
