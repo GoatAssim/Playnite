@@ -441,10 +441,6 @@ namespace Playnite.SDK.Models
         }
 
         /// <summary>
-        ///
-        /// </summary>
-        /// <returns></returns>
-        /// <summary>
         /// Namespace used to derive a stable ID for a game's library plugin play action.
         /// Plugin play actions are <c>PlayController</c> instances and have no stored <see cref="Id"/>.
         /// </summary>
