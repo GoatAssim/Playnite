@@ -287,6 +287,76 @@ namespace Playnite
             }
         }
 
+        public void PlayLibraryPluginAction(Game game, bool launchedFromUI)
+        {
+            logger.Info($"Starting library plugin action for {game.GetIdentifierInfo()}");
+            var dbGame = Database.Games.Get(game.Id);
+            if (dbGame == null)
+            {
+                Dialogs.ShowMessage(
+                    string.Format(resources.GetString("LOCGameStartErrorNoGame"), game.Name),
+                    resources.GetString("LOCGameError"),
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            if (game.IsCustomGame)
+            {
+                throw new Exception("Game has no library plugin play action.");
+            }
+
+            if (!game.IncludeLibraryPluginAction)
+            {
+                throw new Exception("Library plugin play action is disabled for this game.");
+            }
+
+            if (Extensions?.Plugins == null || !Extensions.Plugins.TryGetValue(game.PluginId, out var loadedPlugin) || loadedPlugin?.Plugin == null)
+            {
+                throw new Exception("Library plugin not found.");
+            }
+
+            List<PlayController> controllers = null;
+            try
+            {
+                controllers = loadedPlugin.Plugin.GetPlayActions(new GetPlayActionsArgs { Game = game })?.ToList();
+            }
+            catch (Exception e) when (!PlayniteEnvironment.ThrowAllErrors)
+            {
+                logger.Error(e, $"Failed to get play actions from library plugin {loadedPlugin.Description?.Name}");
+                throw new Exception("Failed to get library plugin play action.");
+            }
+
+            if (!controllers.HasItems())
+            {
+                throw new Exception("Library plugin did not provide a play action.");
+            }
+
+            object playAction = null;
+            if (controllers.Count > 1 && actionSelector != null)
+            {
+                playAction = actionSelector.SelectPlayAction(controllers, new List<GameAction>());
+            }
+            else
+            {
+                playAction = controllers[0];
+            }
+
+            if (playAction == null)
+            {
+                foreach (var item in controllers)
+                {
+                    item.Dispose();
+                }
+
+                return;
+            }
+
+            if (StartGameWithPlayAction(game, playAction, launchedFromUI, controllers))
+            {
+                UpdateJumpList();
+            }
+        }
+
         public void ActivateAction(Game game, GameAction action)
         {
             try

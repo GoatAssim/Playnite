@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using System.Runtime.Serialization;
@@ -437,6 +438,42 @@ namespace Playnite.SDK.Models
             }
 
             return true;
+        }
+
+        /// <summary>
+        ///
+        /// </summary>
+        /// <returns></returns>
+        /// <summary>
+        /// Namespace used to derive a stable ID for a game's library plugin play action.
+        /// Plugin play actions are <c>PlayController</c> instances and have no stored <see cref="Id"/>.
+        /// </summary>
+        private static readonly Guid LibraryPluginPlayActionNamespace =
+            new Guid("3d6f1a90-8c4e-4b7a-9d21-5e8c0b2a7f14");
+
+        /// <summary>
+        /// Returns a stable action ID for the library integration play action of <paramref name="gameId"/>.
+        /// The same game always gets the same ID; plugins do not need to assign one.
+        /// </summary>
+        public static Guid GetLibraryPluginPlayActionId(Guid gameId)
+        {
+            if (gameId == Guid.Empty)
+            {
+                return Guid.Empty;
+            }
+
+            using (var sha = SHA1.Create())
+            {
+                var nsBytes = LibraryPluginPlayActionNamespace.ToByteArray();
+                var idBytes = gameId.ToByteArray();
+                var input = new byte[nsBytes.Length + idBytes.Length];
+                Buffer.BlockCopy(nsBytes, 0, input, 0, nsBytes.Length);
+                Buffer.BlockCopy(idBytes, 0, input, nsBytes.Length, idBytes.Length);
+                var hash = sha.ComputeHash(input);
+                var guidBytes = new byte[16];
+                Array.Copy(hash, guidBytes, 16);
+                return new Guid(guidBytes);
+            }
         }
 
         /// <summary>

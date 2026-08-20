@@ -446,7 +446,7 @@ namespace Playnite.SDK.Models
 
         private bool includeLibraryPluginAction = true;
         /// <summary>
-        /// Gets or sets id of plugin responsible for handling this game.
+        /// Gets or sets value indicating whether library plugin play action should be included.
         /// </summary>
         public bool IncludeLibraryPluginAction
         {
@@ -1451,6 +1451,24 @@ namespace Playnite.SDK.Models
         public bool IsCustomGame
         {
             get => PluginId == Guid.Empty;
+        }
+
+        /// <summary>
+        /// Stable ID for the library integration play action.
+        /// Derived from <see cref="Id"/>; not stored in the database and not assigned by plugins.
+        /// </summary>
+        [DontSerialize]
+        public Guid LibraryPluginPlayActionId
+        {
+            get
+            {
+                if (IsCustomGame)
+                {
+                    return Guid.Empty;
+                }
+
+                return GameAction.GetLibraryPluginPlayActionId(Id);
+            }
         }
 
         /// <summary>

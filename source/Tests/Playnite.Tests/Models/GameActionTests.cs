@@ -88,6 +88,27 @@ namespace Playnite.Tests.Models
         }
 
         [Test]
+        public void GetLibraryPluginPlayActionId_IsStablePerGame()
+        {
+            var gameId = Guid.NewGuid();
+            var first = GameAction.GetLibraryPluginPlayActionId(gameId);
+            var second = GameAction.GetLibraryPluginPlayActionId(gameId);
+            Assert.AreNotEqual(Guid.Empty, first);
+            Assert.AreEqual(first, second);
+            Assert.AreNotEqual(first, GameAction.GetLibraryPluginPlayActionId(Guid.NewGuid()));
+        }
+
+        [Test]
+        public void LibraryPluginPlayActionId_EmptyForCustomGames()
+        {
+            var custom = new Game { Name = "custom" };
+            Assert.AreEqual(Guid.Empty, custom.LibraryPluginPlayActionId);
+
+            var pluginGame = new Game { Name = "steam", PluginId = Guid.NewGuid() };
+            Assert.AreEqual(GameAction.GetLibraryPluginPlayActionId(pluginGame.Id), pluginGame.LibraryPluginPlayActionId);
+        }
+
+        [Test]
         public void OnDeserialized_AssignsIdWhenEmpty()
         {
             var action = new GameAction();

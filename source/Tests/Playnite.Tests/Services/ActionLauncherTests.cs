@@ -108,5 +108,39 @@ namespace Playnite.Tests
                 Assert.IsNull(error);
             }
         }
+
+        [Test]
+        public void TryLaunchActionByIds_LibraryPluginAction_WithoutPlugin_ReturnsFalse()
+        {
+            using (var wrapper = new GameDbTestWrapper())
+            {
+                var game = new Game
+                {
+                    Name = "Plugin Game",
+                    PluginId = Guid.NewGuid()
+                };
+                wrapper.DB.Games.Add(game);
+
+                var editor = new GamesEditor(
+                    wrapper.DB,
+                    new GameControllerFactory(wrapper.DB),
+                    new PlayniteSettings(),
+                    null,
+                    null,
+                    new TestPlayniteApplication(),
+                    null);
+
+                var result = ActionLauncher.TryLaunchActionByIds(
+                    wrapper.DB,
+                    editor,
+                    game.Id,
+                    game.LibraryPluginPlayActionId,
+                    out var error);
+
+                Assert.IsFalse(result);
+                Assert.IsNotNull(error);
+                StringAssert.Contains("plugin", error.ToLowerInvariant());
+            }
+        }
     }
 }

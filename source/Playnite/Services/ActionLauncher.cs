@@ -23,6 +23,21 @@ namespace Playnite
             var action = game.GameActions?.FirstOrDefault(a => a.Id == actionId);
             if (action == null)
             {
+                if (actionId != Guid.Empty && actionId == game.LibraryPluginPlayActionId)
+                {
+                    try
+                    {
+                        gamesEditor.PlayLibraryPluginAction(game, launchedFromUI: false);
+                        return true;
+                    }
+                    catch (Exception e)
+                    {
+                        logger.Error(e, $"Failed to launch library plugin action for game {gameId}");
+                        error = e.Message;
+                        return false;
+                    }
+                }
+
                 error = $"Action {actionId} not found in game {gameId}.";
                 return false;
             }

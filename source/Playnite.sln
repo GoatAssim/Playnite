@@ -10,6 +10,9 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Playnite.SDK", "PlayniteSDK\Playnite.SDK.csproj", "{19BC9097-5705-4352-90E2-99F0C63230D0}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tools", "Tools", "{214A3A6E-C961-405E-8F5E-96314B672CF2}"
+	ProjectSection(SolutionItems) = preProject
+		ProtobufDiagnostic.cs = ProtobufDiagnostic.cs
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PlayniteInstaller", "Tools\PlayniteInstaller\PlayniteInstaller.csproj", "{62DDB6BD-36D1-42C1-BA38-6C7550EA366E}"
 EndProject
